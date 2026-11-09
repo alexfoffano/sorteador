@@ -283,6 +283,22 @@
     @keyframes blink{ 50%{ opacity:.45; } }
     #fx-canvas{ position:fixed; top:0; left:0; width:100vw; height:100vh; pointer-events:none; z-index:100; }
 
+    /* Telas baixas (ex.: 1280x512): nome, logo e contagem menores para nada se sobrepor */
+    @media (max-height: 700px){
+      .stage .stage-logo{ top:12px; height:clamp(36px, 8.5vh, 56px); }
+      #fx-label{ margin-bottom:8px; font-size:.8rem; }
+      #fx-count{ font-size:min(22rem, 50vh); }
+      #fx-name{
+        font-size:clamp(1.8rem, 9vh, 3.6rem);
+        padding:10px 28px 6px; border-bottom-width:6px;
+      }
+      #fx-prize{ margin-top:14px; font-size:1rem; padding:8px 14px; }
+      #fx-progress{ margin-top:14px; }
+      #fx-hint{ bottom:10px; font-size:.75rem; }
+      .stage .headline{ font-size:clamp(2.4rem, 13vh, 5rem) !important; margin:4px 0 10px; }
+      .stage .sub{ margin-bottom:18px; }
+    }
+
     @media (prefers-reduced-motion: reduce){
       *{ animation-duration:.01ms !important; }
     }
