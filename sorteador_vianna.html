@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sorteador • Faculdade Vianna Júnior</title>
+  <link rel="icon" id="favicon" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    /* ===== Identidade visual Vianna (vianna.edu.br) ===== */
+    :root{
+      --navy:#1B264B;       /* primária */
+      --navy-2:#223366;     /* primária hover */
+      --navy-3:#2c3d78;
+      --red:#DA2128;        /* destaque */
+      --red-dark:#B81920;   /* destaque hover */
+      --gray:#C5C5C5;       /* secundária */
+      --text:#3A3A3A;
+      --muted:#6b7280;
+      --line:#e3e5ec;
+      --bg:#f4f5f8;
+      --white:#fff;
+      --radius:10px;
+      --font-display:"Bebas Neue", Impact, "Arial Narrow", sans-serif;
+      --font-body:Roboto, system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+    }
+    *{ margin:0; padding:0; box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      font-family:var(--font-body); color:var(--text); background:var(--bg);
+      display:flex; flex-direction:column; min-height:100vh;
+      -webkit-font-smoothing:antialiased;
+    }
+    .hidden{ display:none !important; }
+
+    /* ===== Topbar ===== */
+    .topbar{
+      background:var(--navy); color:#fff;
+      border-bottom:4px solid var(--red);
+    }
+    .topbar-inner{
+      width:min(1180px, 100%); margin:0 auto; padding:14px 24px;
+      display:flex; align-items:center; justify-content:space-between; gap:16px;
+    }
+    .topbar .logo{ height:54px; width:auto; display:block; }
+    .topbar .app-title{
+      font-family:var(--font-display); font-size:1.9rem; letter-spacing:.04em; line-height:1;
+      text-align:right;
+    }
+    .topbar .app-title small{
+      display:block; font-family:var(--font-body); font-size:.72rem; letter-spacing:.18em;
+      text-transform:uppercase; color:var(--gray); font-weight:500; margin-top:4px;
+    }
+
+    main{ flex:1; width:min(1180px, 100%); margin:0 auto; padding:32px 24px 40px; }
+    footer{ text-align:center; font-size:.8rem; color:var(--muted); padding:16px; }
+    .app{ display:flex; flex-direction:column; flex:1; min-height:100vh; }
+
+    /* ===== Banners laterais de propaganda =====
+       Ativados quando existir "banner sorteador 1" e/ou "banner sorteador 2" (.jpg/.png)
+       na mesma pasta. A área central fica com --app-w e cada banner ocupa o restante
+       da largura (ex.: 1920x1080 → centro 900px, banners 510x1080). */
+    :root{ --app-w:900px; --side:calc((100vw - var(--app-w)) / 2); }
+    .banner{ display:none; position:fixed; top:0; bottom:0; width:var(--side); z-index:95; background:var(--navy); overflow:hidden; }
+    .banner img{ width:100%; height:100%; object-fit:cover; object-position:center; display:block; }
+    .banner-left{ left:0; }
+    .banner-right{ right:0; }
+    @media (min-width: 1200px){
+      html.banners-on, html.banners-on body{ overflow:hidden; }
+      html.banners-on .banner{ display:block; }
+      html.banners-on .app{
+        position:fixed; top:0; bottom:0; left:var(--side); width:var(--app-w);
+        overflow-y:auto; min-height:0; background:var(--bg);
+        box-shadow:0 0 40px rgba(0,0,0,.25);
+      }
+      html.banners-on .stage{ left:var(--side); right:auto; width:var(--app-w); }
+      html.banners-on #fx-canvas{ left:var(--side); width:var(--app-w); }
+      html.banners-on .stage .headline{ font-size:clamp(3rem, 4.6vw, 5.2rem); }
+      html.banners-on .shapes span{ transform:scale(.8); }
+    }
+
+    /* ===== Títulos ===== */
+    .eyebrow{ color:var(--red); font-weight:700; font-size:.78rem; letter-spacing:.16em; text-transform:uppercase; }
+    .page-title{
+      font-family:var(--font-display); color:var(--navy); font-weight:400;
+      font-size:clamp(2.4rem, 3vw + 1.2rem, 3.6rem); line-height:1; letter-spacing:.01em; margin:6px 0 6px;
+    }
+    .page-title .accent{ color:var(--red); }
+    .lead{ color:var(--muted); max-width:640px; }
+
+    /* ===== Cards de configuração ===== */
+    .steps{ display:grid; grid-template-columns:1fr; gap:18px; margin-top:28px; }
+    @media (min-width: 900px){ .steps{ grid-template-columns:1fr 1fr; } }
+    .card{
+      background:#fff; border:1px solid var(--line); border-radius:var(--radius);
+      padding:22px; box-shadow:0 1px 2px rgba(27,38,75,.04);
+    }
+    .card-head{ display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+    .step-num{
+      width:34px; height:34px; border-radius:50%; flex:none;
+      background:var(--navy); color:#fff; display:grid; place-items:center;
+      font-family:var(--font-display); font-size:1.25rem; padding-top:2px;
+    }
+    .card h2{ font-size:1.02rem; color:var(--navy); font-weight:700; }
+    .card h2 span{ font-weight:400; color:var(--muted); font-size:.9rem; }
+    .hint{ font-size:.86rem; color:var(--muted); margin-top:8px; line-height:1.45; }
+
+    input[type="number"], input[type="text"], textarea{
+      width:100%; border:1.5px solid var(--line); border-radius:8px; padding:12px 14px;
+      font:inherit; font-size:1rem; color:var(--text); background:#fff;
+      transition:border-color .15s ease, box-shadow .15s ease;
+    }
+    textarea{ min-height:150px; resize:vertical; line-height:1.5; }
+    input:focus, textarea:focus{ outline:none; border-color:var(--navy); box-shadow:0 0 0 3px rgba(27,38,75,.12); }
+
+    /* Dropzone */
+    .dropzone{
+      display:block; position:relative; border:2px dashed var(--gray); border-radius:var(--radius);
+      padding:28px 16px; text-align:center; cursor:pointer; background:#fafbfd;
+      transition:border-color .15s ease, background .15s ease;
+    }
+    .dropzone:hover, .dropzone.drag{ border-color:var(--red); background:#fff6f6; }
+    .dropzone input{ position:absolute; inset:0; opacity:0; cursor:pointer; }
+    .dropzone svg{ width:36px; height:36px; color:var(--navy); margin-bottom:8px; }
+    .dropzone strong{ color:var(--navy); display:block; }
+    .dropzone .file-name{ margin-top:8px; font-weight:700; color:var(--red); font-size:.92rem; word-break:break-all; }
+
+    .counter{
+      display:inline-flex; align-items:center; gap:8px; margin-top:10px;
+      font-size:.88rem; color:var(--navy); font-weight:700;
+      background:#eef0f6; padding:6px 10px; border-radius:6px;
+    }
+    .counter:empty{ display:none; }
+
+    /* Botões */
+    .actions{ display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-top:24px; }
+    .btn{
+      font:inherit; font-weight:700; font-size:1rem; letter-spacing:.01em;
+      border:0; border-radius:var(--radius); padding:13px 26px; cursor:pointer;
+      display:inline-flex; align-items:center; gap:10px;
+      transition:background .15s ease, transform .1s ease, box-shadow .15s ease;
+    }
+    .btn:active{ transform:translateY(1px); }
+    .btn:focus-visible{ outline:3px solid rgba(218,33,40,.35); outline-offset:2px; }
+    .btn-primary{ background:var(--red); color:#fff; box-shadow:0 6px 16px rgba(218,33,40,.25); }
+    .btn-primary:hover{ background:var(--red-dark); }
+    .btn-primary:disabled{ background:var(--gray); box-shadow:none; cursor:not-allowed; }
+    .btn-navy{ background:var(--navy); color:#fff; }
+    .btn-navy:hover{ background:var(--navy-2); }
+    .btn-ghost{ background:transparent; color:var(--navy); border:1.5px solid var(--line); }
+    .btn-ghost:hover{ border-color:var(--navy); }
+    .btn-lg{ font-size:1.1rem; padding:16px 32px; }
+    .btn svg{ width:18px; height:18px; }
+
+    .error{ color:var(--red); font-weight:700; font-size:.92rem; }
+    .error:empty{ display:none; }
+
+    /* ===== Tela de sorteio ===== */
+    .draw-top{ display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:16px; }
+    .prize-tag{
+      display:inline-flex; align-items:center; gap:10px; margin-top:10px;
+      background:var(--red); color:#fff; font-weight:700; padding:8px 14px; border-radius:6px;
+      max-width:100%;
+    }
+    .prize-tag svg{ width:18px; height:18px; flex:none; }
+
+    .stats{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:12px; margin-top:24px; }
+    @media (max-width: 700px){ .stats{ grid-template-columns:repeat(2, minmax(0,1fr)); } }
+    .stat{
+      background:#fff; border:1px solid var(--line); border-left:4px solid var(--navy);
+      border-radius:8px; padding:14px 16px;
+    }
+    .stat.red{ border-left-color:var(--red); }
+    .stat .label{ font-size:.74rem; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); font-weight:700; }
+    .stat .value{ font-family:var(--font-display); font-size:2.3rem; color:var(--navy); line-height:1.05; margin-top:2px; }
+
+    .results{
+      margin-top:22px; background:var(--navy); border-radius:var(--radius); padding:26px;
+      position:relative; overflow:hidden; min-height:160px;
+    }
+    .results::after{ /* elemento gráfico do site: semicírculo vermelho */
+      content:""; position:absolute; right:-60px; top:-60px; width:180px; height:180px;
+      border-radius:50%; border:22px solid var(--red); opacity:.9; pointer-events:none;
+    }
+    .results h3{ font-family:var(--font-display); color:#fff; font-weight:400; font-size:1.7rem; letter-spacing:.03em; }
+    .results h3 small{ font-family:var(--font-body); font-size:.8rem; color:var(--gray); letter-spacing:.1em; margin-left:8px; text-transform:uppercase; }
+    .winners{ display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:12px; margin-top:16px; position:relative; z-index:1; }
+    .winner{
+      display:flex; align-items:center; gap:14px; background:#fff; border-radius:8px;
+      padding:14px 16px; animation:pop .35s ease both;
+    }
+    .winner .n{
+      font-family:var(--font-display); font-size:1.6rem; color:#fff; background:var(--red);
+      width:44px; height:44px; border-radius:6px; display:grid; place-items:center; flex:none; padding-top:3px;
+    }
+    .winner .name{ font-weight:700; color:var(--navy); font-size:1.05rem; word-break:break-word; }
+    .empty{ color:var(--gray); margin-top:14px; }
+
+    .history{ margin-top:22px; }
+    .history h3{ font-size:.82rem; text-transform:uppercase; letter-spacing:.14em; color:var(--navy); margin-bottom:10px; }
+    .history ol{ list-style:none; display:flex; flex-direction:column; gap:8px; max-height:240px; overflow:auto; }
+    .history li{
+      background:#fff; border:1px solid var(--line); border-radius:8px; padding:10px 14px;
+      display:flex; gap:12px; align-items:baseline; font-size:.95rem;
+    }
+    .history .tag{ font-weight:700; color:var(--red); white-space:nowrap; font-size:.85rem; }
+    .history .tag time{ color:var(--muted); font-weight:500; margin-left:6px; }
+    .history:has(ol:empty){ display:none; }
+
+    .kbd{ font-size:.8rem; color:var(--muted); }
+    .kbd b{ border:1px solid var(--line); border-bottom-width:2px; padding:1px 6px; border-radius:4px; background:#fff; font-weight:700; color:var(--navy); }
+
+    @keyframes pop{ 0%{ transform:scale(.9); opacity:0; } 100%{ transform:scale(1); opacity:1; } }
+
+    /* ===== Telas cheias (pronto + overlay) ===== */
+    .stage{
+      position:fixed; inset:0; z-index:90; background:var(--navy); color:#fff;
+      display:none; flex-direction:column; align-items:center; justify-content:center;
+      text-align:center; padding:24px; overflow:hidden;
+    }
+    .stage.show{ display:flex; }
+    .stage .stage-logo{
+      position:absolute; top:24px; left:50%; transform:translateX(-50%);
+      height:clamp(60px, 9vh, 96px); width:auto; z-index:2;
+    }
+    .stage > *:not(.shapes){ position:relative; z-index:2; }
+    .stage .stage-logo{ position:absolute; }
+    /* Formas geométricas da identidade (círculos/quartos em vermelho e cinza) */
+    .shapes{ position:absolute; inset:0; pointer-events:none; z-index:1; }
+    .shapes span{ position:absolute; display:block; }
+    .s1{ width:22vmin; height:22vmin; background:var(--red); border-radius:0 100% 0 0; right:6vmin; top:14vmin; }
+    .s2{ width:22vmin; height:22vmin; background:var(--gray); border-radius:100% 0 0 0; right:6vmin; top:36vmin; opacity:.85; }
+    .s3{ width:16vmin; height:16vmin; border:3.2vmin solid var(--red); border-radius:50%; left:7vmin; bottom:10vmin; }
+    .s4{ width:30vmin; height:11vmin; border:2.4vmin solid var(--gray); border-radius:11vmin; left:-6vmin; top:22vmin; opacity:.55; }
+    .s5{ width:14vmin; height:14vmin; background:var(--gray); border-radius:0 0 0 100%; right:28vmin; bottom:-2vmin; opacity:.35; }
+    @media (max-width: 700px){ .shapes{ opacity:.35; } }
+
+    .stage .kicker{ color:var(--red); font-weight:700; letter-spacing:.2em; text-transform:uppercase; font-size:.9rem; }
+    .stage .headline{
+      font-family:var(--font-display); font-weight:400; line-height:.95; letter-spacing:.01em;
+      font-size:clamp(3rem, 8vw, 6.5rem); margin:8px 0 14px;
+    }
+    .stage .headline .accent{ color:var(--red); }
+    .stage .sub{ color:#d9dcea; font-size:1.05rem; margin-bottom:28px; max-width:720px; }
+    .stage .back{ margin-top:16px; background:none; border:0; color:var(--gray); font:inherit; cursor:pointer; text-decoration:underline; }
+    .stage .back:hover{ color:#fff; }
+
+    /* Overlay de contagem / vencedor */
+    #fx-count{
+      font-family:var(--font-display); font-size:clamp(9rem, 32vw, 22rem); line-height:.9;
+      color:#fff; animation:boom .55s ease;
+    }
+    #fx-count.go{ color:var(--red); }
+    #fx-label{ color:var(--gray); letter-spacing:.24em; text-transform:uppercase; font-weight:700; font-size:.95rem; margin-bottom:14px; }
+    #fx-name{
+      font-family:var(--font-display); font-weight:400; color:var(--navy); background:#fff;
+      font-size:clamp(2.6rem, 7vw, 6rem); line-height:1.05; letter-spacing:.01em;
+      padding:18px 40px 12px; border-radius:var(--radius);
+      border-bottom:10px solid var(--red); max-width:min(1100px, 92%); word-break:break-word;
+      box-shadow:0 30px 60px rgba(0,0,0,.35);
+    }
+    #fx-prize{
+      margin-top:22px; display:inline-flex; align-items:center; gap:10px;
+      background:var(--red); color:#fff; font-weight:700; font-size:clamp(1rem, 1.6vw, 1.35rem);
+      padding:10px 18px; border-radius:6px; max-width:min(900px, 90%);
+    }
+    #fx-prize svg{ width:22px; height:22px; flex:none; }
+    #fx-progress{ margin-top:22px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+    #fx-progress i{ width:28px; height:6px; border-radius:3px; background:rgba(255,255,255,.22); display:block; }
+    #fx-progress i.on{ background:var(--red); }
+    #fx-hint{
+      position:absolute; bottom:22px; left:50%; transform:translateX(-50%);
+      color:var(--gray); font-size:.85rem; letter-spacing:.12em; text-transform:uppercase;
+      opacity:0; transition:opacity .25s ease;
+    }
+    #fx-overlay.await{ cursor:pointer; }
+    #fx-overlay.await #fx-hint{ opacity:1; animation:blink 1.6s ease-in-out infinite; }
+    .reveal{ animation:reveal .55s cubic-bezier(.2,.9,.3,1.2) both; }
+    @keyframes boom{ 0%{ transform:scale(.6); opacity:0; } 100%{ transform:scale(1); opacity:1; } }
+    @keyframes reveal{ 0%{ transform:translateY(24px) scale(.92); opacity:0; } 100%{ transform:none; opacity:1; } }
+    @keyframes blink{ 50%{ opacity:.45; } }
+    #fx-canvas{ position:fixed; top:0; left:0; width:100vw; height:100vh; pointer-events:none; z-index:100; }
+
+    @media (prefers-reduced-motion: reduce){
+      *{ animation-duration:.01ms !important; }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <!-- Ícones -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></symbol>
+  </svg>
+
+  <!-- Banners laterais (carregados automaticamente se existirem) -->
+  <aside class="banner banner-left" aria-label="Publicidade"><img id="banner-1" alt="Faculdade Vianna Júnior" /></aside>
+  <aside class="banner banner-right" aria-label="Publicidade"><img id="banner-2" alt="Faculdade Vianna Júnior" /></aside>
+
+  <canvas id="fx-canvas" class="hidden"></canvas>
+
+  <!-- OVERLAY: contagem e revelação -->
+  <div id="fx-overlay" class="stage" aria-hidden="true">
+    <div class="shapes" aria-hidden="true"><span class="s1"></span><span class="s2"></span><span class="s3"></span><span class="s4"></span><span class="s5"></span></div>
+    <img class="stage-logo" data-logo alt="Faculdade Vianna Júnior" />
+    <div id="fx-label">Sorteando</div>
+    <div id="fx-count">3</div>
+    <div id="fx-name" class="hidden"></div>
+    <div id="fx-prize" class="hidden"><svg><use href="#i-trophy"/></svg><span></span></div>
+    <div id="fx-progress"></div>
+    <div id="fx-hint">Clique ou pressione Espaço para continuar</div>
+  </div>
+
+  <!-- TELA DE PRONTO -->
+  <div id="ready-screen" class="stage" aria-hidden="true">
+    <div class="shapes" aria-hidden="true"><span class="s1"></span><span class="s2"></span><span class="s3"></span><span class="s4"></span><span class="s5"></span></div>
+    <img class="stage-logo" data-logo alt="Faculdade Vianna Júnior" />
+    <div class="kicker">#AindaMaisVianna</div>
+    <h1 class="headline">Tudo pronto para o <span class="accent">sorteio</span></h1>
+    <p class="sub" id="ready-summary"></p>
+    <button id="btn-start" class="btn btn-primary btn-lg" type="button"><svg><use href="#i-play"/></svg>Iniciar sorteio</button>
+    <button id="btn-back" class="back" type="button">Voltar e editar</button>
+  </div>
+
+  <div class="app">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <img class="logo" data-logo alt="Faculdade Vianna Júnior" />
+      <div class="app-title">Sorteador<small>Faculdade Vianna Júnior</small></div>
+    </div>
+  </header>
+
+  <main>
+    <!-- PREPARAÇÃO -->
+    <section id="initial-screen">
+      <div class="eyebrow">Configuração</div>
+      <h1 class="page-title">Prepare o seu <span class="accent">sorteio</span></h1>
+      <p class="lead">Importe uma planilha ou cole a lista de participantes, defina quantos nomes saem por rodada e, se quiser, informe o prêmio.</p>
+
+      <div class="steps">
+        <div class="card">
+          <div class="card-head"><div class="step-num">1</div><h2>Importar planilha <span>(.xlsx ou .csv)</span></h2></div>
+          <label class="dropzone" id="dropzone">
+            <input id="names-file" type="file" accept=".xlsx,.xls,.csv" />
+            <svg><use href="#i-upload"/></svg>
+            <strong>Clique ou arraste o arquivo aqui</strong>
+            <span class="hint">Usamos a primeira aba; cada célula com texto vira um nome.</span>
+            <div class="file-name" id="file-name"></div>
+          </label>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><div class="step-num">2</div><h2>Ou colar a lista de nomes</h2></div>
+          <textarea id="names-text" placeholder="Um nome por linha, ou separados por vírgula / ponto e vírgula"></textarea>
+          <p class="hint">Nomes duplicados e espaços extras são removidos automaticamente.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><div class="step-num">3</div><h2>Nomes por rodada</h2></div>
+          <input id="per-draw" type="number" min="1" value="1" inputmode="numeric" />
+          <div class="counter" id="names-preview"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><div class="step-num">4</div><h2>Prêmio <span>(opcional)</span></h2></div>
+          <input id="prize-text" type="text" placeholder="Ex.: Bolsa de 100% • Kit Vianna • Brinde especial" />
+          <p class="hint">Aparece na tela de revelação e no topo dos resultados.</p>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary btn-lg" id="btn-prepare" type="button">Preparar sorteio</button>
+        <button class="btn btn-ghost" id="btn-clear" type="button">Limpar campos</button>
+        <p id="error-initial" class="error" role="alert"></p>
+      </div>
+    </section>
+
+    <!-- SORTEIO -->
+    <section id="draw-screen" class="hidden">
+      <div class="draw-top">
+        <div>
+          <div class="eyebrow">Resultado</div>
+          <h1 class="page-title">Nomes <span class="accent">sorteados</span></h1>
+          <div class="prize-tag hidden" id="prize-ribbon"><svg><use href="#i-trophy"/></svg><span></span></div>
+        </div>
+        <div class="actions" style="margin-top:0">
+          <button class="btn btn-primary" id="btn-next" type="button"><svg><use href="#i-play"/></svg>Próxima rodada</button>
+          <button class="btn btn-ghost" id="btn-export" type="button"><svg><use href="#i-download"/></svg>Exportar</button>
+          <button class="btn btn-navy" id="btn-exit" type="button">Encerrar</button>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="label">Participantes</div><div class="value" id="st-total">0</div></div>
+        <div class="stat red"><div class="label">Sorteados</div><div class="value" id="st-drawn">0</div></div>
+        <div class="stat"><div class="label">Restantes</div><div class="value" id="st-left">0</div></div>
+        <div class="stat"><div class="label">Por rodada</div><div class="value" id="st-per">0</div></div>
+      </div>
+
+      <div class="results">
+        <h3>Última rodada <small id="round-label"></small></h3>
+        <div id="names-display" class="winners"></div>
+        <p class="empty hidden" id="all-done">Todos os participantes já foram sorteados.</p>
+      </div>
+
+      <div class="history">
+        <h3>Histórico de rodadas</h3>
+        <ol id="rounds-list"></ol>
+      </div>
+
+      <p class="error" id="error-draw" role="alert" style="margin-top:12px"></p>
+      <p class="kbd" style="margin-top:14px">Atalho: <b>Espaço</b> inicia a próxima rodada.</p>
+    </section>
+  </main>
+
+  <footer>Faculdade Vianna Júnior • Juiz de Fora – MG</footer>
+  </div>
+
+  <script>
+  (function(){
+    const $ = (id) => document.getElementById(id);
+
+    // Logo oficial Faculdade Vianna Júnior (embutido)
+    const LOGO = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB4bWw6c3BhY2U9InByZXNlcnZlIiBzdHlsZT0ic2hhcGUtcmVuZGVyaW5nOmdlb21ldHJpY1ByZWNpc2lvbjt0ZXh0LXJlbmRlcmluZzpnZW9tZXRyaWNQcmVjaXNpb247aW1hZ2UtcmVuZGVyaW5nOm9wdGltaXplUXVhbGl0eTtmaWxsLXJ1bGU6ZXZlbm9kZDtjbGlwLXJ1bGU6ZXZlbm9kZCIgdmlld0JveD0iMCAwIDEyNTYuNzEgNDkxLjE2Ij48ZGVmcz48c3R5bGU+LmZpbDB7ZmlsbDojZmZmO2ZpbGwtcnVsZTpub256ZXJvfTwvc3R5bGU+PC9kZWZzPjxnIGlkPSJDYW1hZGFfeDAwMjBfMSI+PHBhdGggZD0iTTAgMGgxMjU2LjcxdjQ5MS4xNkgweiIgY2xhc3M9ImZpbDAiPjwvcGF0aD48cGF0aCBkPSJNMjEuMzUgNDY5LjgxaDQ0Mi45NlYyMS4zNUgyMS4zNXoiIHN0eWxlPSJmaWxsOiMxYjI2NGI7ZmlsbC1ydWxlOm5vbnplcm8iPjwvcGF0aD48cGF0aCBkPSJNMTQ0LjAxIDQ0MS4xYzYuNzkgNC40NyAzNi4yLTI1LjY5IDQyLjI2LTMxLjg4IDguMTEtOC4zMS0uNzgtMS44OSAxOS4wOC0xLjgzIDcuOTMuMDMgMjEuNzUtMy41OSAyNC4wOS05LjY0LTQuNTEtMy4yNi00My44LTI1LjMzLTQ0LjczLTI2LjY4LTQuOTctNy4yMiA1LjcxLTkyLjk2IDQ4LjkxLTEyOS41IDE5LjgyLTE2Ljc2IDQ4LjM3LTQ5LjAxIDY0LjczLTY5LjY0Ljc0LS45MyAxLjQyLTIuMjEgMi40Ny0yLjU0IDUuMTIgNDUuMTYgMzUuNy0uNDMgMzMuOTctMzQuNTktLjI1LTUuMTMtMS42NS01LjE0Ljc3LTguMTIgMTkuOTMtMjMuMzIgNDEuNDYtNDYuMjMgNjcuODQtNjIuODcgMjUuOC0xNi4yOC0zLjUyLTE1LjU0LTE5LjI2LTkuNDYtNS40NyAyLjEyLTIzLTI3LjEyLTkwLjU0IDE3Ljg0LTMxLjIyIDIwLjc5LTQ5LjU0IDM1LjcyLTcyLjMxIDYwLjI0LTExLjQ4IDEyLjM3LTQ5Ljk1IDQuMTItNzUuNzIgMjMuODQtMTYuNjkgMTIuNzcgMjYuNyAxLjczIDMzLjU1IDI0LjYyIDMuODUgMTIuODctNDYuOTQgOTYuNjktMjAuODQgMTYyLjg1IDIwLjU2IDUyLjA5IDUuNzcgMjAuNi0uNDYgNjEuMzgtMy45MSAyNS42Mi0xNS4wNSAzMC4yMi0xMy44MSAzNS45OCIgY2xhc3M9ImZpbDAiPjwvcGF0aD48cGF0aCBkPSJNMTE2Ny40MiAzNDQuOTJjMC0xMi4xMiAxLjE1LTE0LjY0IDcuODYtMTQuMTcgMzUuMTcgMi40NSAyNS41MiA0Ny45NC03Ljg2IDQ0LjYxem04LjE2LTE1NS42NGMuNDkuMzkgMTAuNTYgMjYuMDIgMTAuOTggMjguMzRsLTIyLjEzLjA2Yy40Ni0yLjA2IDEwLjcyLTI3Ljk0IDExLjE1LTI4LjRtLTY4Ni44Ni0yOS43MWM0Ljk5IDEuNDYgOC4yMSAxLjQ2IDEyLjM4IDcuNzggMy42NiA1LjU1IDM2LjA4IDg5LjEzIDQwLjU5IDEwMC41bDQuNzkuMTVjNS45Mi0xMy40OCAzOC45LTkyIDQ0LjA2LTEwMC4xMSA1LjU1LTguNzIgMTAuMjEtNy41MyAxMi4xNC04LjY1LjEyLTEuNDEuMjUtMy4xLS4xNy00LjQzbC0zOS4xLS4wOGMtLjM0IDEuNTItLjM3IDMuMzctLjA3IDQuODEgMy40MiAxLjQyIDEzLjUxLS4yOSA4LjA2IDE1LjQ1LTUuNTcgMTYuMS0xNi4zOSA0MC45NS0yMy40IDU3LjU0LTEuMjEtMS42My0yMS43OS01NS4xOC0yMi42Ni01Ny45Ni00LjcxLTE1LjA3IDUuNTgtMTMuMzUgOS42Mi0xNS4yMy42Mi01LjI1LS4yMi00LjYzLTIuNTItNC42MS0xMS44LjExLTM1LjA0LS41Ni00My41Ny4wNnptMTM2LjkxIDEuMzFjMTEuODcgMS43IDEyLjUzIDcuNDEgMTIuNTYgMTkuNDMuMDQgMTIuODYgMS45NSA2OS45LTIuMjggNzcuMjEtMi41MSA0LjMzLTUuMTIgMy45Ni0xMC4zMyA1LjUxbC0uMDIgNC42NSA0NC4xNC4wNi0uMDYtNC42N2MtOS4xMi0yLjg0LTEyLjk0LTIuNTYtMTIuOTItMTkuMjRWMTc5LjdjLS4wMi0yMC4yOSA4LjU0LTE2Ljg2IDEyLjk1LTE5LjI0bC4wMi00LjU2aC00NC4wNHptMTEzLjAyIDU2LjkyczEwLjExLTI3LjggMTEuNTItMjguNjJjMS4yOCAyLjgyIDEwLjkzIDI3LjQgMTAuOTcgMjguNjJ6bS00Mi44OSA0OS44NGMxLjE5LjY3IDM1LjcyLjMyIDM5LjY5LjMzbC4xMi00LjljLTEwLjA3LTEuMzMtMTIuNDMtNS4wOC04Ljc5LTE1LjEzIDEuMDYtMi45MSA2LjczLTE4LjA0IDcuODEtMTkuNjhsMzAuNjgtLjA2YzMuMTQgOC40MyAxMS4zMiAyNS4yOCA3Ljk2IDMwLjc1LTIuNDUgNC03LjkzIDMuNDktOS40IDQuNDJsLS4xNiA0LjQ2YzEyLjY1LjU1IDMyLjc0LjExIDQ1Ljk4LjExbC4xMi00Ljg2Yy0xMi42OC0yLjA4LTE0LjM1LTguODItMTkuMTctMjEuMjFsLTM0LjM4LTg3LjEtNC4yMS0uMDRjLTUuNTkgMTIuOTEtNDAuNDcgOTUuNjQtNDUuNzEgMTAyLjY1LTUuOCA3Ljc3LTEyLjk1IDIuODItMTAuNTQgMTAuMjd6bTEzOC45My0xMDcuMTJjMTEuMjMgMS41OCAxMi41NCA3LjgzIDEyLjQ4IDE5LjE4bC4wMyA2My44M2MtLjAzIDExLjYxLTEuMTEgMTcuNzctMTIuNTEgMTkuNTJsLS4wMiA0LjY2IDM3Ljc3LjAzdi00LjcxYy03LjY5LTEuMDItMTEuNzgtNC4wNC0xMy4wNy0xMS40NS0uMTQtLjgxLTEuMDYtNjcuNjctLjI1LTcyLjg5IDEuMTYuMyA3Mi41NSA4NC44OCA3My45OCA4Ni44MiAyLjE3IDIuOTYgMi4zNSAyLjM3IDguOTMgMi4yMS41LTI4LjgxLjA3LTYwLjU0LjAyLTg5Ljg1LS4wMi0xMC4zNSAyLjQxLTE2LjY1IDEyLjgtMTcuMzdsLjA4LTQuNzUtMzcuNDQtLjA0LjAxIDQuNzdjMTUuOTQgMi4yNCAxMy4xNSAxMi45NSAxMy4xNCAyOS42bC0uMDYgNDIuNjRjLTEuNDQtLjczLTU5LjExLTY5LjIxLTY1LjUzLTc2LjgybC0zMC4zOC0uMTJ6bTE1MS41My0uMDVjMTIuNDUgMi4xIDEyLjcxIDguMTEgMTIuNjQgMTkuMjN2NjMuODNjMCAxMy44NC0xLjI5IDE3LjA1LTEyLjYgMTkuNTlsLS4xMSA0LjU3IDM3Ljk2LjA1LS4wNS00LjU1Yy0xNi4zMS00Ljc0LTEzLjM4LTguMjUtMTMuMzctMzUuNTQgMC0xMy44Ni0uNDktMzYuMTEtLjAxLTQ4LjgyIDIuMjYuOTEgNjUuMDYgNzYuOCA3My40MSA4Ni44NiAxLjk2IDIuMzYgMi4yMSAyLjQxIDguNzMgMS45OSAxLTE4Ljk1LS4wNy02OC41LS4wMy04OS44MS4wNC0xOC42OCA4LjktMTUuNjYgMTIuNjctMTcuNjUuMjMtMS4xMS4zLTMuNTMtLjA5LTQuNDFsLTM3LjItLjE3LS4xIDQuODFjMTguMDMgMy4zMiAxMy4zMiAxNC43NCAxMy4zMyA1MC43MS4wMSA2LjQyLjUxIDE1LjM2LS4wOCAyMS40OC0xLjMxLS4zOC01MS45OC02MC44My01OS4zNS02OS40Mi03LjktOS4xOC00LjE5LTcuNS0xNC4wNS03LjUxLTYuOCAwLTE0LjktLjQtMjEuNTQuMDQtLjQ3IDEuMzQtLjI2IDMuMjUtLjE2IDQuNzF6bTEzNS45NiAxMDIuNjQtLjA1IDQuNzdjMTIuNDguMjkgMjYuNDcuMDYgMzkuMTkuMTJsLjAzLTQuOTVjLTE2LjktMS40OC03Ljc5LTE2LjQ1LTIuOC0zMC4xNSAyLjE5LTYuMDIuNzMtNS4xNiA3Ljg3LTUuMTUgMjkuNzQuMDMgMjEuODYtNS43NyAzMS43MSAyMC4xMSA1LjQxIDE0LjI0LTQuNTcgMTMuOTItOS4yMiAxNS40bC0uMDQgNC40OCA0NS4xNC4xNmMuMy0xMS40My00LjM3LjE4LTEyLjc2LTEyLjYyLTQuODktNy40Ni0zMy4zMS04NC45Ni0zOS4zNC05OS4zMS0uMS0uMjQtMy4yLTQuMy01Ljc2IDEuNjktNS41OCAxMy4wOC0zNy43MyA5MC4xNi00MS44MyA5Ni44My0zLjE1IDUuMTEtNC45NiA3LjEyLTEyLjE0IDguNjJtLTYwOS4wNCA2My42MmMxNC45NiAyLjYyIDEyLjM3IDExLjI0IDEyLjMzIDMxLjAxLS4wNSAxOC44NiAxLjQ2IDY5LjM4LTIuNzEgODQuNy02LjE1IDIyLjU2LTI1LjYgOS43My0yNy45MiAxMC45NC0uMDEgMC0xOS4wNiAxOS4wNiA1LjQ4IDE2LjEyIDIzLjM2LTIuNzkgNDAuODUtMjYuNzYgNDQuMzgtNDkuMzQgMi42OC0xNy4xNi00LTgwLjk1IDMuODktODkuNjEgNi40Ni03LjEyIDkuNzMgMS4yMiA5LjcyLTguNTFsLTQ1LjU0LS4xMnptNzUuMTQtLjE0YzEzLjA0IDQuMjEgMTIuMyAzLjQ2IDEyLjI3IDMwLjg1LS4wMyAyOC43Ni00LjYxIDU2LjE0IDE0LjM1IDcxLjc0IDIyLjY4IDE4LjY2IDc0LjIxIDEzLjcgNzkuMTEtMjkuODkgMy40Mi0zMC40MS04LjIyLTY5LjI2IDEwLjg1LTcyLjQ5IDIuODItLjQ3IDIuNTMuMjkgMi40Ny00Ljc2bC0zNy4yNC0uMTEtLjA5IDQuMzZjNy41OSA0LjM0IDEyLjg1LTMuNTcgMTIuODUgMjMuODIgMCAzMC4zNSA3LjMzIDc4LjctMzEuMzIgNzguOS0zOS42Mi4yLTMyLjExLTQ2Ljc5LTMyLjA3LTc4LjI5LjAzLTI3LjYxIDYuNTEtMjAuODEgMTIuNjEtMjQuMzhsLjE4LTQuMy00My45NS0uMDh6bTU2LjE2LTEzLjI0IDcuOC4xNiAyNC42My0zMS4wNC0xOS4zLjA1em05Ny4zOSAxMy4yNWM5LjE5IDIuNzIgMTIuNjMgMi4wNyAxMi43IDE5LjIzLjA1IDEwLjg4IDEuOTUgNzAuNDUtMi4xIDc3LjM5LTQuOTQgOC40OC0xMS43Ni44Ni0xMC41OSAxMC4zNCAyLjE0LjQxIDM3LjEuMDkgMzcuNTYtLjEybC4zMy00LjQ4Yy0yMi42OC01LjI0LTEwLjg4LTI1LjY2LTEzLjM4LTgzLjkgNi4yOSAxLjk3IDcxLjg2IDg4LjY3IDc3Ljg2IDg4LjYyIDEuNy0uMDIgMy43Mi4xIDUuMzYtLjA2IDIuMjMtMTYuODQtMy43OS05Mi42MyAyLjcxLTEwMi4wMyAyLjQ0LTMuNTQgNC44Ny0zLjg4IDEwLjE2LTUuMTJsLjItNC40OS0zNy42NC0uMDItLjA2IDQuNjFjMjAuNTggMy45OCAxMS40MiAyMS43IDEzLjAyIDcyLjE0LTIuMTQtLjkxLTY0LjExLTc0Ljc0LTY1LjgtNzYuNzNsLTMwLjMyLS4wNHptMTU5LjYgMTAyLjM2LS4xIDQuNTIgNDMuMzkuMTEuMDMtNC42OWMtOS4yLTIuNzctMTIuNTEtMi42LTEyLjUyLTE5LjI0di02My41MmMtLjAzLTExLjk4Ljk5LTE3Ljg4IDEyLjQ5LTE5LjU1bC4wNS00LjU1LTQzLjQtLjA4Yy0uMzYgMTEuOTcgMTIuMzktMS4zMiAxMi4zNiAyMC41MS0uMDEgMTEuMDMgMS43NyA3My40OC0xLjk0IDgwLjM5LTIuNDkgNC42NC00LjczIDQuMzQtMTAuMzYgNi4xbTEwMy44NS00OS4yM2MtNC4zOS02MC44IDc1LjI0LTY4LjQxIDc1LjY1LTIuNzUuMzkgNjEuMjYtNzAuODQgNjkuMTYtNzUuNjQgMi43NXptMzQuODEtNTcuNDZjLTgwLjkzIDguMzEtNjUuODEgMTE2LjQ3IDUuODUgMTExLjkzIDYzLjM4LTQuMDIgNzQuMjEtODcuMjQgMTguNDUtMTA4LjE4LTYuODUtMi41Ny0xNi4yOC00LjU3LTI0LjMtMy43NW05Ni41NiAxMDYuNzctLjA4IDQuMzRjMS45My40NyAzOC4zMS4zNCA0Mi43My4xNWwuMDUtNC42N2MtMTUuNTYtMi4yMi0xMy4zLTI0LjI3LTExLjg4LTQ2LjI4IDEuNzgtLjQ2IDkuNDItLjI5IDExLjU4LS4xMyA1LjExIDkuMzkgMTQuNDUgMjQuMTggMjAuMjQgMzQuMDQgNi41NCAxMS4yNSA3Ljg0IDE2LjkgMjMuMDEgMTcuNTMgMS4yMy4wNSAxMS41OS4wMiAxMi44My0uOTJsLjE5LTQuMzJjLTIwLjkxLTguNjgtMjEuMzMtMjEuODQtMzcuNy00Ny41Ni0uNjQtLjk1LTIuMDMtMi42MS0yLjM3LTMuNjMgMzEuMTYtMTcuODcgMjMuMzktNDcuODctMi4xNy01NC4xMy02LjI1LTEuNTMtNTMuMDEtMi4yNi01Ni40My0xLjMxLS40IDExLjE2IDEyLjAxLTEuMTIgMTEuOTkgMjAuMzJsLS4wMyA2NS42NmMuMDEgMjIuMjUtNi4wMiAxNy44MS0xMS45NiAyMC45MSIgc3R5bGU9ImZpbGw6IzFiMjY0YiI+PC9wYXRoPjxwYXRoIGQ9Ik00ODguNTggMjEuMzVoNzQ2LjgzdjExMC4xMUg0ODguNTh6IiBzdHlsZT0iZmlsbDojZGEyMTI4O2ZpbGwtcnVsZTpub256ZXJvIj48L3BhdGg+PHBhdGggZD0iTTQ4OC41OCAyODkuMjJoMTU1Ljc0bC00Ljc1IDExLjE2SDQ4OC41OHptMTk0LjczIDBoNTUyLjF2MTEuMTZINjc0LjQ1eiIgc3R5bGU9ImZpbGw6I2RhMjEyOCI+PC9wYXRoPjxwYXRoIGQ9Ik01MzAuOTggMTA0LjA1aDExLjQ1VjgyLjE3aDIxLjI1VjcxLjY2aC0yMS4yNXYtMTIuNGgyNC4xN1Y0OC43NWgtMzUuNjJ6bTY0LjI4IDBoMTEuNTNsNC4wMy0xMi4wMWgxOS4wNGw0LjExIDEyLjAxaDExLjg0bC0xOS44Mi01NS42MWgtMTAuOXptMTkuMDMtMjIuMTIgNi4wOS0xOC4wMSA2IDE4LjAxem04Ny43NSAyMi45MWM4LjQ1IDAgMTMuNzQtMy4xNiAxOC43Mi04LjI5bC02Ljg3LTguMTRjLTMuNzIgMy43MS02Ljk2IDUuNzctMTEuMzggNS43Ny03LjM1IDAtMTMuMDQtNi43Mi0xMy4wNC0xNy43di0uMjRjMC0xMC43NCA1LjQ1LTE3LjYxIDEyLjg4LTE3LjYxIDQuNSAwIDcuOTggMi4xMyAxMS4zIDUuNTNsNi44Ny04Ljg1Yy00LjI2LTQuMzUtOS41Ni03LjM1LTE3Ljc3LTcuMzUtMTQuNjIgMC0yNS4wNSAxMS4zOC0yNS4wNSAyOC4xMnYuNzJjMCAxNi45IDkuOCAyOC4wNCAyNC4zMyAyOC4wNHptNzYuNTIuMDhjMTIuOCAwIDIxLjE3LTcuMzUgMjEuMTctMjIuNTlWNDguNzVoLTExLjM3djM0LjEzYzAgNy42Ni0zLjcyIDExLjQ1LTkuNjQgMTEuNDUtNS45MyAwLTkuNjQtMy44Ny05LjY0LTExLjY5VjQ4Ljc1aC0xMS40NXYzMy44MWMwIDE0LjkzIDguMjEgMjIuMzYgMjAuOTMgMjIuMzZtNjEuMjgtLjg3aDMzLjgxVjkzLjU0aC0yMi4zNlY0OC43NWgtMTEuNDV6bTcxLjIzIDBoMTcuODVjMTYuMDQgMCAyNi4zOS0xMS4xNCAyNi4zOS0yNy4zM3YtLjcxYzAtMTYuMi0xMC4zNS0yNy4yNi0yNi4zOS0yNy4yNmgtMTcuODV6bTE3Ljc3LTQ0Ljk1YzguNjkgMCAxNC42MiA2LjE2IDE0LjYyIDE3LjE0di40YzAgMTAuOTgtNS45MyAxNy4wNi0xNC42MiAxNy4wNmgtNi4zMlY1OS4xem01OC4wNCA0NC45NWgxMS41NGw0LjAzLTEyLjAxaDE5LjAzbDQuMTEgMTIuMDFoMTEuODVsLTE5LjgzLTU1LjYxaC0xMC45em0xOS4wNC0yMi4xMiA2LjA4LTE4LjAxIDYuMDEgMTguMDF6bTY4LjE1IDIyLjEyaDE3Ljg1YzE2LjA0IDAgMjYuMzktMTEuMTQgMjYuMzktMjcuMzN2LS43MWMwLTE2LjItMTAuMzUtMjcuMjYtMjYuMzktMjcuMjZoLTE3Ljg1em0xNy43OC00NC45NWM4LjY5IDAgMTQuNjEgNi4xNiAxNC42MSAxNy4xNHYuNGMwIDEwLjk4LTUuOTIgMTcuMDYtMTQuNjEgMTcuMDZoLTYuMzJWNTkuMXptNjUuMjIgNDQuOTVoMzUuOTVWOTMuN2gtMjQuNTdWODEuMzhoMjEuMzNWNzEuMDNoLTIxLjMzVjU5LjFoMjQuMjVWNDguNzVoLTM1LjYzeiIgc3R5bGU9ImZpbGw6I2ZmZiI+PC9wYXRoPjwvZz48L3N2Zz4=';
+    document.querySelectorAll('img[data-logo]').forEach(i => i.src = LOGO);
+    $('favicon').href = LOGO;
+
+    // Banners laterais: procura "banner sorteador 1" e "banner sorteador 2" na mesma pasta.
+    // Se só um existir, ele é usado nos dois lados. Se nenhum existir, o layout fica em tela cheia.
+    function findImage(base){
+      const exts = ['jpg','png','jpeg','webp','JPG','PNG'];
+      return new Promise(resolve => {
+        let i = 0;
+        const next = () => {
+          if(i >= exts.length) return resolve(null);
+          const url = encodeURI(`${base}.${exts[i++]}`);
+          const img = new Image();
+          img.onload = () => resolve(url);
+          img.onerror = next;
+          img.src = url;
+        };
+        next();
+      });
+    }
+    Promise.all([findImage('banner sorteador 1'), findImage('banner sorteador 2')]).then(([b1, b2]) => {
+      b1 = b1 || b2; b2 = b2 || b1;
+      if(!b1) return;
+      $('banner-1').src = b1; $('banner-2').src = b2;
+      document.documentElement.classList.add('banners-on');
+    });
+
+    let allNames = [], remainingNames = [], drawnNames = [], roundsHistory = [];
+    let perDraw = 0, prizeText = '', running = false;
+
+    /* ---------- utilidades ---------- */
+    const normalizeName = (s) => (s ?? "").toString().replace(/ /g, " ").replace(/\s+/g, " ").trim();
+    function uniqueNonEmpty(list){
+      const seen = new Set(), out = [];
+      for(const raw of list){
+        const n = normalizeName(raw), k = n.toLocaleLowerCase('pt-BR');
+        if(n && !seen.has(k)){ seen.add(k); out.push(n); }
+      }
+      return out;
+    }
+    function parseFromText(text){
+      if(!text) return [];
+      return uniqueNonEmpty(text.split(/(?:\r\n|\n|\r|[\u2028\u2029])|[,;]+/));
+    }
+    // Aleatoriedade criptográfica (mais justa que Math.random)
+    function randInt(max){
+      const buf = new Uint32Array(1), limit = Math.floor(0x100000000 / max) * max;
+      let x; do { crypto.getRandomValues(buf); x = buf[0]; } while(x >= limit);
+      return x % max;
+    }
+    function sampleWithoutReplacement(source, k){
+      const pool = [...source], picked = [];
+      for(let i=0; i<k && pool.length; i++) picked.push(pool.splice(randInt(pool.length), 1)[0]);
+      return picked;
+    }
+    const hhmm = (d) => d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+    const el = (tag, cls, text) => { const e = document.createElement(tag); if(cls) e.className = cls; if(text != null) e.textContent = text; return e; };
+
+    /* ---------- planilha ---------- */
+    function parseFromFile(file){
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try{
+            const wb = XLSX.read(new Uint8Array(e.target.result), { type:"array" });
+            const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header:1, raw:false });
+            const cells = [];
+            for(const row of rows) for(const c of row) if(typeof c === "string" || typeof c === "number") cells.push(String(c));
+            resolve(uniqueNonEmpty(cells));
+          }catch(err){ reject(err); }
+        };
+        reader.onerror = () => reject(reader.error);
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+    async function collectNames(){
+      const f = $("names-file").files?.[0];
+      const fromFile = f ? await parseFromFile(f) : [];
+      return uniqueNonEmpty([...fromFile, ...parseFromText($("names-text").value)]);
+    }
+
+    // Contador ao vivo
+    let previewTimer;
+    function refreshPreview(){
+      clearTimeout(previewTimer);
+      previewTimer = setTimeout(async () => {
+        try{
+          const n = (await collectNames()).length;
+          $("names-preview").textContent = n ? `${n} participante${n>1?'s':''} identificado${n>1?'s':''}` : '';
+        }catch{ $("names-preview").textContent = ''; }
+      }, 200);
+    }
+
+    /* ---------- dropzone ---------- */
+    const dz = $("dropzone"), fileInput = $("names-file");
+    ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('drag'); }));
+    ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, () => dz.classList.remove('drag')));
+    dz.addEventListener('drop', e => {
+      e.preventDefault();
+      if(e.dataTransfer.files.length){ fileInput.files = e.dataTransfer.files; fileInput.dispatchEvent(new Event('change')); }
+    });
+    fileInput.addEventListener('change', () => {
+      $("file-name").textContent = fileInput.files[0] ? fileInput.files[0].name : '';
+      refreshPreview();
+    });
+    $("names-text").addEventListener('input', refreshPreview);
+
+    /* ---------- render ---------- */
+    function updateStats(){
+      $("st-total").textContent = allNames.length;
+      $("st-drawn").textContent = drawnNames.length;
+      $("st-left").textContent = remainingNames.length;
+      $("st-per").textContent = perDraw;
+      const done = remainingNames.length === 0;
+      $("btn-next").disabled = done;
+      $("all-done").classList.toggle('hidden', !done);
+    }
+    function renderNames(list){
+      const wrap = $("names-display"); wrap.innerHTML = "";
+      let base = drawnNames.length - list.length;
+      list.forEach((name, i) => {
+        const card = el('div', 'winner');
+        card.style.animationDelay = (i * 0.06) + "s";
+        card.append(el('div', 'n', String(base + i + 1)), el('div', 'name', name));
+        wrap.appendChild(card);
+      });
+      const r = roundsHistory.length;
+      $("round-label").textContent = r ? `Rodada ${r}` : '';
+    }
+    function renderHistory(){
+      const ol = $("rounds-list"); ol.innerHTML = "";
+      roundsHistory.slice().reverse().forEach((r, i) => {
+        const idx = roundsHistory.length - i;
+        const li = el('li');
+        const tag = el('span', 'tag', `Rodada ${idx}`);
+        const t = el('time', null, hhmm(new Date(r.time)));
+        tag.appendChild(t);
+        li.append(tag, el('span', null, r.names.join(", ")));
+        ol.appendChild(li);
+      });
+    }
+
+    /* ---------- confete nas cores da marca ---------- */
+    const canvas = $('fx-canvas');
+    function resizeCanvas(){ const r = canvas.getBoundingClientRect(); canvas.width = r.width || innerWidth; canvas.height = r.height || innerHeight; }
+    addEventListener('resize', resizeCanvas);
+    function confettiBurst(durationMs=2600, count=170){
+      const ctx = canvas.getContext('2d');
+      canvas.classList.remove('hidden'); resizeCanvas();
+      const colors = ['#DA2128','#B81920','#ffffff','#C5C5C5','#3a4f99'];
+      const W = canvas.width, H = canvas.height, start = performance.now();
+      const pieces = Array.from({length:count}, () => ({
+        x: W/2 + (Math.random()-.5)*W*0.5, y: H*0.55, vx:(Math.random()*2-1)*9, vy:-(8 + Math.random()*10),
+        size: 7 + Math.random()*9, rot: Math.random()*Math.PI*2, vr:(Math.random()*2-1)*0.25,
+        color: colors[(Math.random()*colors.length)|0], g:0.28 + Math.random()*0.12, circle: Math.random() < .3
+      }));
+      (function tick(){
+        const t = performance.now() - start; ctx.clearRect(0,0,W,H);
+        for(const p of pieces){
+          p.vy += p.g; p.vx *= 0.99; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+          ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.color;
+          if(p.circle){ ctx.beginPath(); ctx.arc(0,0,p.size/2.4,0,Math.PI*2); ctx.fill(); }
+          else ctx.fillRect(-p.size/2, -p.size/4, p.size, p.size/2);
+          ctx.restore();
+        }
+        if(t < durationMs) requestAnimationFrame(tick); else { ctx.clearRect(0,0,W,H); canvas.classList.add('hidden'); }
+      })();
+    }
+
+    /* ---------- overlay ---------- */
+    function restart(node, cls){ node.classList.remove(cls); void node.offsetWidth; node.classList.add(cls); }
+    function countdownShow(names, done){
+      const overlay = $('fx-overlay'), countEl = $('fx-count'), nameEl = $('fx-name'),
+            prizeEl = $('fx-prize'), labelEl = $('fx-label'), prog = $('fx-progress');
+      overlay.classList.add('show'); overlay.classList.remove('await'); overlay.setAttribute('aria-hidden','false');
+      nameEl.classList.add('hidden'); prizeEl.classList.add('hidden');
+      countEl.classList.remove('hidden', 'go'); labelEl.textContent = `Rodada ${roundsHistory.length} • sorteando`;
+      prog.innerHTML = names.length > 1 ? names.map(() => '<i></i>').join('') : '';
+
+      let n = 3; countEl.textContent = n; restart(countEl, 'reveal');
+      const step = () => {
+        if(n > 1){ n--; countEl.textContent = n; countEl.style.animation='none'; void countEl.offsetWidth; countEl.style.animation=''; return setTimeout(step, 700); }
+        countEl.classList.add('hidden');
+        let idx = 0;
+        const showOne = () => {
+          labelEl.textContent = names.length > 1 ? `Sorteado ${idx+1} de ${names.length}` : 'Sorteado(a)';
+          nameEl.textContent = names[idx]; nameEl.classList.remove('hidden'); restart(nameEl, 'reveal');
+          if(prizeText){ prizeEl.querySelector('span').textContent = prizeText; prizeEl.classList.remove('hidden'); }
+          prog.querySelectorAll('i').forEach((b, j) => b.classList.toggle('on', j <= idx));
+          confettiBurst();
+          setTimeout(() => {
+            idx++;
+            if(idx < names.length) return showOne();
+            overlay.classList.add('await');
+            const finish = (e) => {
+              if(e.type === 'keydown' && ![' ','Enter','Escape'].includes(e.key)) return;
+              e.preventDefault();
+              overlay.removeEventListener('click', finish); removeEventListener('keydown', finish);
+              overlay.classList.remove('show','await'); overlay.setAttribute('aria-hidden','true');
+              done && done();
+            };
+            overlay.addEventListener('click', finish); addEventListener('keydown', finish);
+          }, 3000);
+        };
+        showOne();
+      };
+      setTimeout(step, 700);
+    }
+
+    /* ---------- fluxo ---------- */
+    async function prepareList(){
+      $("error-initial").textContent = "";
+      const per = Number($("per-draw").value);
+      prizeText = normalizeName($("prize-text").value);
+      let names;
+      try{ names = await collectNames(); }
+      catch{ $("error-initial").textContent = "Não foi possível ler a planilha. Verifique o arquivo."; return; }
+
+      if(!names.length) return $("error-initial").textContent = "Adicione nomes pela planilha ou cole no campo de texto.";
+      if(!Number.isInteger(per) || per < 1) return $("error-initial").textContent = "Informe uma quantidade válida de nomes por rodada (mínimo 1).";
+      if(per > names.length) return $("error-initial").textContent = `A quantidade por rodada (${per}) é maior que o total de nomes (${names.length}).`;
+
+      allNames = [...names]; remainingNames = [...names]; drawnNames = []; roundsHistory = []; perDraw = per;
+      $("ready-summary").textContent =
+        `${allNames.length} participantes • ${perDraw} por rodada${prizeText ? ' • Prêmio: ' + prizeText : ''}`;
+      const ready = $("ready-screen"); ready.classList.add("show"); ready.setAttribute("aria-hidden","false");
+      $("btn-start").focus();
+    }
+
+    function hideReady(){ const r = $("ready-screen"); r.classList.remove("show"); r.setAttribute("aria-hidden","true"); }
+
+    function startDraw(){
+      hideReady();
+      $("initial-screen").classList.add("hidden"); $("draw-screen").classList.remove("hidden");
+      const ribbon = $('prize-ribbon');
+      ribbon.querySelector('span').textContent = prizeText;
+      ribbon.classList.toggle('hidden', !prizeText);
+      updateStats(); renderNames([]); renderHistory();
+      doRound();
+    }
+
+    function doRound(){
+      if(running) return;
+      $("error-draw").textContent = "";
+      if(!remainingNames.length){ updateStats(); return; }
+      running = true;
+      const picked = sampleWithoutReplacement(remainingNames, Math.min(perDraw, remainingNames.length));
+      remainingNames = remainingNames.filter(n => !picked.includes(n));
+      drawnNames.push(...picked);
+      roundsHistory.push({ time: new Date().toISOString(), names: [...picked] });
+      countdownShow(picked, () => { running = false; renderNames(picked); updateStats(); renderHistory(); });
+    }
+
+    function exportCSV(){
+      if(!roundsHistory.length){ $("error-draw").textContent = "Ainda não há resultados para exportar."; return; }
+      const esc = (v) => `"${String(v).replace(/"/g,'""')}"`;
+      const lines = [['Ordem','Rodada','Horário','Nome','Prêmio'].map(esc).join(';')];
+      let ord = 0;
+      roundsHistory.forEach((r, i) => r.names.forEach(n =>
+        lines.push([++ord, i+1, new Date(r.time).toLocaleString('pt-BR'), n, prizeText].map(esc).join(';'))));
+      const blob = new Blob(['﻿' + lines.join('\r\n')], { type:'text/csv;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `sorteio-vianna-${new Date().toISOString().slice(0,10)}.csv`;
+      a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }
+
+    function clearInputs(){
+      fileInput.value = ""; $("file-name").textContent = "";
+      $("names-text").value = ""; $("per-draw").value = "1"; $("prize-text").value = "";
+      $("names-preview").textContent = ""; $("error-initial").textContent = "";
+    }
+
+    function exit(){
+      if(drawnNames.length && !confirm("Encerrar este sorteio? Os resultados não exportados serão perdidos.")) return;
+      allNames = []; remainingNames = []; drawnNames = []; roundsHistory = []; perDraw = 0; prizeText = '';
+      clearInputs();
+      $("draw-screen").classList.add("hidden"); $("initial-screen").classList.remove("hidden");
+      $("names-display").innerHTML = ""; $("rounds-list").innerHTML = "";
+    }
+
+    $("btn-prepare").addEventListener("click", prepareList);
+    $("btn-clear").addEventListener("click", clearInputs);
+    $("btn-start").addEventListener("click", startDraw);
+    $("btn-back").addEventListener("click", hideReady);
+    $("btn-next").addEventListener("click", doRound);
+    $("btn-export").addEventListener("click", exportCSV);
+    $("btn-exit").addEventListener("click", exit);
+    $("per-draw").addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); prepareList(); } });
+    addEventListener("keydown", e => {
+      const onDraw = !$("draw-screen").classList.contains("hidden");
+      const overlayOpen = $("fx-overlay").classList.contains("show");
+      if(e.key === " " && onDraw && !overlayOpen && !running && document.activeElement.tagName !== 'BUTTON'){
+        e.preventDefault(); doRound();
+      }
+      if(e.key === "Escape" && $("ready-screen").classList.contains("show")) hideReady();
+    });
+  })();
+  </script>
+</body>
+</html>
