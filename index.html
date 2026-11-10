@@ -667,8 +667,9 @@
       if(per > names.length) return $("error-initial").textContent = `A quantidade por rodada (${per}) é maior que o total de nomes (${names.length}).`;
 
       allNames = [...names]; remainingNames = [...names]; drawnNames = []; roundsHistory = []; perDraw = per;
-      $("ready-summary").textContent =
-        `${allNames.length} participantes • ${perDraw} por rodada${prizeText ? ' • Prêmio: ' + prizeText : ''}`;
+      // Na tela do sorteio aparece só o prêmio (sem total de participantes nem nomes por rodada)
+      $("ready-summary").textContent = prizeText ? `Prêmio: ${prizeText}` : '';
+      $("ready-summary").classList.toggle('hidden', !prizeText);
       const ready = $("ready-screen"); ready.classList.add("show"); ready.setAttribute("aria-hidden","false");
       $("btn-start").focus();
     }
@@ -720,7 +721,7 @@
     function exit(){
       if(drawnNames.length && !confirm("Encerrar este sorteio? Os resultados não exportados serão perdidos.")) return;
       allNames = []; remainingNames = []; drawnNames = []; roundsHistory = []; perDraw = 0; prizeText = '';
-      clearInputs();
+      // Os campos da configuração são mantidos para facilitar reiniciar o sorteio.
       $("draw-screen").classList.add("hidden"); $("initial-screen").classList.remove("hidden");
       $("names-display").innerHTML = ""; $("rounds-list").innerHTML = "";
     }
